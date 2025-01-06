@@ -10,6 +10,7 @@ import {
   Identity,
   PartialApply,
   _,
+  unset,
   arg,
   arg0,
   arg1,
@@ -28,6 +29,7 @@ import { Match } from "./internals/match/Match";
 
 export {
   _,
+  unset,
   arg,
   arg0,
   arg1,
