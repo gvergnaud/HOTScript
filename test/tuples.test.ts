@@ -1,5 +1,5 @@
 import { Booleans } from "../src/internals/booleans/Booleans";
-import { Call, Fn, Pipe, _ } from "../src/internals/core/Core";
+import { Call, ComposeLeft, Fn, Pipe, _ } from "../src/internals/core/Core";
 import { Equal, Expect } from "../src/internals/helpers";
 import { Numbers } from "../src/internals/numbers/Numbers";
 import { Strings } from "../src/internals/strings/Strings";
@@ -569,3 +569,35 @@ describe("Tuples", () => {
     type test3 = Expect<Equal<res3, 362880>>;
   });
 });
+
+type Sum = Tuples.Reduce<Numbers.Add, 0>;
+
+type Comp1 = ComposeLeft<
+  [
+    Tuples.Map<Numbers.Add<1>>,
+    Tuples.Map<
+      ComposeLeft<
+        [
+          Numbers.Add<1>,
+          Numbers.Mul<3>,
+          Strings.ToString,
+          Strings.Prepend<"1">,
+          Strings.ToNumber
+        ]
+      >
+    >,
+    Tuples.Map<Numbers.Add<1>>,
+    Sum,
+    Strings.ToString,
+    Strings.Prepend<"1">,
+    Strings.ToNumber,
+    Numbers.Mul<10>,
+    Numbers.Div<_, 2>
+  ]
+>;
+
+type Composition = ComposeLeft<[Comp1, Tuples.Append<_, []>, Comp1]>;
+
+type t19 = Call<Composition, [1, 2, 3, 4]>;
+//   ^?
+type test19 = Expect<Equal<t19, 5602635>>;

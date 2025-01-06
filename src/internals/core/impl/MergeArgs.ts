@@ -10,6 +10,15 @@ export type ExcludePlaceholders<xs, output extends any[] = []> = xs extends [
     : ExcludePlaceholders<rest, [...output, first]>
   : output;
 
+export type ExcludeUnset<xs, output extends any[] = []> = xs extends [
+  infer first,
+  ...infer rest
+]
+  ? first extends unset
+    ? ExcludeUnset<rest, output>
+    : ExcludeUnset<rest, [...output, first]>
+  : output;
+
 type MergeArgsRec<
   pipedArgs extends any[],
   partialArgs extends any[],

@@ -1,8 +1,8 @@
 import { ExcludePlaceholders, MergeArgs } from "./impl/MergeArgs";
 import { Head } from "../helpers";
 
-declare const rawArgs: unique symbol;
-type rawArgs = typeof rawArgs;
+export declare const rawArgs: unique symbol;
+export type rawArgs = typeof rawArgs;
 
 /**
  * Base interface for all functions.
@@ -36,8 +36,8 @@ export interface Fn {
   return: unknown;
 }
 
-declare const unset: unique symbol;
-declare const _: unique symbol;
+export declare const unset: unique symbol;
+export declare const _: unique symbol;
 
 /**
  * A placeholder type that can be used to indicate that a parameter is not set.
