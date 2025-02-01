@@ -89,7 +89,7 @@ export type TransformObjectDeep<fn extends Fn, type> = type extends
   : type extends Array<infer values>
   ? IsTuple<type> extends true
     ? Call<fn, { [Key in keyof type]: TransformObjectDeep<fn, type[Key]> }>
-    : Array<TransformObjectDeep<fn, values> | undefined>
+    : Array<TransformObjectDeep<fn, values>>
   : type extends Promise<infer value>
   ? Promise<TransformObjectDeep<fn, value>>
   : type extends object
