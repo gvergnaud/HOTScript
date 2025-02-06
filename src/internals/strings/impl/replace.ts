@@ -1,4 +1,7 @@
 import { Fn } from "../../core/Core";
+import { RegExpStruct } from "./regexp";
+
+import { ReplaceWithRegExp } from "type-level-regexp/regexp";
 
 export type Replace<
   Str,
@@ -13,9 +16,18 @@ export type Replace<
 export interface ReplaceReducer<To extends string> extends Fn {
   return: this["args"] extends [
     infer Str extends string,
-    infer From extends string,
+    infer From extends string | RegExpStruct<string, any>,
     ...any
   ]
-    ? Replace<Str, From, To>
+    ? Str extends Str
+      ? keyof RegExpStruct<string> extends keyof From
+        ? ReplaceWithRegExp<
+            Str,
+            Exclude<From, string>["parsedMatchers"],
+            To,
+            Exclude<From, string>["flags"]
+          >
+        : Replace<Str, Extract<From, string>, To>
+      : never
     : never;
 }

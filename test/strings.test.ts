@@ -45,6 +45,289 @@ describe("Strings", () => {
     type test2 = Expect<Equal<res2, "1">>;
   });
 
+  describe("RegExp", () => {
+    it("with valid RegExp Pattern return a object with `pattern`, `flags` and `parsedMatchers` props", () => {
+      type res1 = Omit<
+        Strings.RegExp<"(?:\\w{2,3})(?<g1>[a-z]+)\\k<g1>", "g" | "i">,
+        "type"
+      >;
+      //    ^?
+      type test1 = Expect<
+        Equal<
+          res1,
+          {
+            pattern: "(?:\\w{2,3})(?<g1>[a-z]+)\\k<g1>";
+            flags: "g" | "i";
+            parsedMatchers: [
+              {
+                type: "repeat";
+                greedy: true;
+                from: "2";
+                to: "3";
+                value: [
+                  {
+                    type: "char";
+                  }
+                ];
+              },
+              {
+                type: "namedCapture";
+                name: "g1";
+                value: [
+                  {
+                    type: "oneOrMore";
+                    greedy: true;
+                    value: [
+                      {
+                        type: "charSet";
+                        value: "a-z";
+                      }
+                    ];
+                  }
+                ];
+              },
+              {
+                type: "backreference";
+                value: "g1";
+              }
+            ];
+          }
+        >
+      >;
+    });
+
+    it("return `SyntaxError` with error message when RegExp pattern is invalid", () => {
+      type res1 = Strings.RegExp<"foo(b(ar)baz">;
+      //    ^?
+
+      type test1 = Expect<
+        Equal<
+          res1,
+          {
+            type: "RegExpSyntaxError";
+            message: "Invalid regular expression, missing closing `)`";
+          } & SyntaxError
+        >
+      >;
+
+      type res2 = $<
+        //    ^?
+        Strings.Match<
+          //@ts-expect-error - { message: "Invalid regular expression, opening `(`"; type: "RegExpSyntaxError"; } & SyntaxError
+          Strings.RegExp<"foobar)baz">
+        >,
+        "foobarbaz"
+      >;
+
+      type res3 = Strings.RegExp<"foo[a-zbar", "g">;
+      //    ^?
+      type test3 = Expect<
+        Equal<
+          res3,
+          {
+            type: "RegExpSyntaxError";
+            message: "Invalid regular expression, missing closing `]`";
+          } & SyntaxError
+        >
+      >;
+      type res4 = Strings.RegExp<"foo?{2}bar", "g">;
+      //    ^?
+      type test4 = Expect<
+        Equal<
+          res4,
+          {
+            type: "RegExpSyntaxError";
+            message: "Invalid regular expression, the preceding token to {2} is not quantifiable";
+          } & SyntaxError
+        >
+      >;
+      type res5 = Strings.RegExp<"foo(?g1>bar)baz">;
+      //    ^?
+      type test5 = Expect<
+        Equal<
+          res5,
+          {
+            type: "RegExpSyntaxError";
+            message: "Invalid regular expression, invalid capture group name for capturing `bar`, possibly due to a missing opening '<' and group name";
+          } & SyntaxError
+        >
+      >;
+      type res6 = Strings.RegExp<"foo(?<g1bar)baz", "g">;
+      //    ^?
+      type test6 = Expect<
+        Equal<
+          res6,
+          {
+            type: "RegExpSyntaxError";
+            message: "Invalid regular expression, invalid capture group name of `g1bar`, possibly due to a missing closing '>' for group name";
+          } & SyntaxError
+        >
+      >;
+    });
+  });
+
+  describe("Match", () => {
+    it("support most basic RegExp tokens", () => {
+      type res1 = $<
+        //    ^?
+        Strings.Match<
+          Strings.RegExp<"a(?<g1>[b-e$]{1,4})\\W\\s\\b\\k<g1>(\\d+)">
+        >,
+        "12ab$c- b$c56#"
+      >;
+      type test1 = Expect<
+        Equal<
+          res1,
+          ["ab$c- b$c56", "b$c", "56"] & {
+            index: 2;
+            groups: {
+              g1: "b$c";
+            };
+          }
+        >
+      >;
+
+      type res2 = $<
+        //    ^?
+        Strings.Match<
+          Strings.RegExp<"a(?<g1>\\w*)(?<g2>\\d+)(?<g3>\\w*)(?<g4>\\w+)">
+        >,
+        "abcd1234xyz"
+      >;
+      type test2 = Expect<
+        Equal<
+          res2,
+          ["abcd1234xyz", "bcd123", "4", "xy", "z"] & {
+            index: 0;
+            groups: {
+              g1: "bcd123";
+              g2: "4";
+              g3: "xy";
+              g4: "z";
+            };
+          }
+        >
+      >;
+    });
+
+    it("support RegExp global `g` flag", () => {
+      type res3 = $<
+        //    ^?
+        Strings.Match<Strings.RegExp<"c\\w{2,6}", "g">>,
+        "cats and cows ride in a car with cozy couch that's made for comfort."
+      >;
+      type test3 = Expect<
+        Equal<res3, ["cats", "cows", "car", "cozy", "couch", "comfort"]>
+      >;
+    });
+
+    it("support RegExp case case insensitive `i` flag", () => {
+      type res4 = $<
+        //    ^?
+        Strings.Match<Strings.RegExp<"C[a-z]+", "g" | "i">>,
+        "Cats and coWs ride in a CAR with cozY cOUch that's made for Comfort."
+      >;
+      type test4 = Expect<
+        Equal<res4, ["Cats", "coWs", "CAR", "cozY", "cOUch", "Comfort"]>
+      >;
+    });
+  });
+
+  describe("MatchAll", () => {
+    it("support most basic RegExp tokens", () => {
+      type res1 = $<
+        //   ^?
+        Strings.MatchAll<Strings.RegExp<"c(?<letters>[a-z]+)", "g">>,
+        "my cats love to play with toy car under the couch."
+      >;
+      type test1 = Expect<
+        Equal<
+          res1,
+          [
+            ["cats", "ats"] & {
+              index: 3;
+              groups: {
+                letters: "ats";
+              };
+            },
+            ["car", "ar"] & {
+              index: 30;
+              groups: {
+                letters: "ar";
+              };
+            },
+            ["couch", "ouch"] & {
+              index: 44;
+              groups: {
+                letters: "ouch";
+              };
+            }
+          ]
+        >
+      >;
+    });
+
+    it("return `null` if no match", () => {
+      type res2 = $<
+        //   ^?
+        Strings.MatchAll<Strings.RegExp<"z(?<letters>[a-z]+)", "g">>,
+        "my cats love to play with toy car under the couch."
+      >;
+
+      type test2 = Expect<Equal<res2, null>>;
+    });
+
+    it("require global `g`", () => {
+      type res3 = $<
+        //   ^?
+        Strings.MatchAll<Strings.RegExp<"c(?<letters>[a-z]+)">>,
+        "my cats love to play with toy car under the couch."
+      >;
+
+      type test3 = Expect<
+        Equal<
+          res3,
+          TypeError & {
+            msg: "MatchAll called with a non-global RegExp argument";
+          }
+        >
+      >;
+    });
+
+    it("support RegExp case insensitive `i` flag", () => {
+      type res4 = $<
+        //    ^?
+        Strings.MatchAll<Strings.RegExp<"c(?<letters>[a-z]+)", "g" | "i">>,
+        "my Cats love to play with toy CAR under the cOucH."
+      >;
+      type test4 = Expect<
+        Equal<
+          res4,
+          [
+            ["Cats", "ats"] & {
+              index: 3;
+              groups: {
+                letters: "ats";
+              };
+            },
+            ["CAR", "AR"] & {
+              index: 30;
+              groups: {
+                letters: "AR";
+              };
+            },
+            ["cOucH", "OucH"] & {
+              index: 44;
+              groups: {
+                letters: "OucH";
+              };
+            }
+          ]
+        >
+      >;
+    });
+  });
+
   describe("Replace", () => {
     it("replaces single letters", () => {
       type res1 = $<Strings.Replace<"a", "b">, "abc">;
@@ -86,6 +369,53 @@ describe("Strings", () => {
       >;
       type test4 = Expect<Equal<res4, "sup world! sup!">>;
     });
+
+    it("support using RegExp pattern", () => {
+      type res8 = $<
+        //    ^?
+        Strings.Replace<
+          Strings.RegExp<"((?:\\w|\\s)+):\\s(?<year>\\d{4})/(?<month>\\d{1,2})/(?<day>\\d{1,2})">,
+          "The $1 is $<month>.$<day>, $2"
+        >,
+        "release day: 2023/2/13"
+      >;
+      type test8 = Expect<Equal<res8, "The release day is 2.13, 2023">>;
+    });
+
+    it("support using union of RegExp pattern", () => {
+      type res9 = $<
+        //    ^?
+        Strings.Replace<
+          | Strings.RegExp<"42\\d{2}(?:-\\d{4}){3}">
+          | Strings.RegExp<"token-[a-zA-Z0-9_]+">,
+          "<masked>"
+        >,
+        "credit card number: 4232-3242-5823-8421, myToken: token-shekh23xz2jd_32jd213"
+      >;
+      type test9 = Expect<
+        Equal<res9, "credit card number: <masked>, myToken: <masked>">
+      >;
+    });
+
+    it("support using RegExp pattern with flags", () => {
+      type res10 = $<
+        //    ^?
+        Strings.Replace<
+          Strings.RegExp<
+            '(<(?:\\/)?)(?<tag>[a-z]{2,16})((?:\\s(?:\\w|=|\\")+)?>)',
+            "g" | "i"
+          >,
+          "$1My$<tag>$3"
+        >,
+        '<Card class="bg-primary"><Title>HotScript X type-level RegExp!</Title><CardContent><p>Type level madness.</p><ActionBtn>READ MORE</ActionBtn></CardContent></Card>'
+      >;
+      type test10 = Expect<
+        Equal<
+          res10,
+          '<Card class="bg-primary"><MyTitle>HotScript X type-level RegExp!</MyTitle><MyCardContent><p>Type level madness.</p><MyActionBtn>READ MORE</MyActionBtn></MyCardContent></MyCard>'
+        >
+      >;
+    });
   });
 
   it("Slice", () => {
@@ -116,6 +446,17 @@ describe("Strings", () => {
     type res4 = $<Strings.Split<"--" | ".">, "1--2-3.4..5">;
     //    ^?
     type test4 = Expect<Equal<res4, ["1", "2-3", "4", "5"]>>;
+
+    type res5 = $<Strings.Split<Strings.RegExp<"-{2,4}|\\.">>, "1--2-3.4..5">;
+    //    ^?
+    type test5 = Expect<Equal<res5, ["1", "2-3", "4", "5"]>>;
+
+    type res6 = $<
+      //    ^?
+      Strings.Split<Strings.RegExp<"{|}"> | Strings.RegExp<"[*-.:]">>,
+      "{name:'foo',age:18}"
+    >;
+    type test6 = Expect<Equal<res6, ["name", "'foo'", "age", "18"]>>;
   });
 
   it("Repeat", () => {

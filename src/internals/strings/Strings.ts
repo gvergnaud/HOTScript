@@ -14,6 +14,22 @@ export namespace Strings {
     | undefined;
 
   /**
+   * Create a RegExp object with the given pattern and flags, use for `Strings.Replace`, `Strings.Match`, `Strings.MatchAll`.
+   * @param Pattern - The pattern of the RegExp.
+   * @param Flags - The flags of the RegExp.
+   * @returns A RegExp object.
+   * @example
+   * ```ts
+   * type T0 = Call<S.Match<S.RegExp<"A(?<g1>[b-e]{1,2})F", "i">>, "12aBef34">; // ["aBef", "Be"] & { index: 2; groups: { g1: "Be" } }
+   * type T1 = Call<S.Match<S.RegExp<"a(?<g1>[b-e]{1,2})f", "g" | "i">>, "12aBef34AeCf56">; // ["aBef", "AeCf"]
+   * ```
+   */
+  export type RegExp<
+    Pattern extends string,
+    Flags extends Impl.SupportedRegExpFlags = never
+  > = Impl.RegExpStruct<Pattern, Flags>;
+
+  /**
    * Get the length of a string.
    * @param args[0] - The string to get the length of.
    * @returns The length of the string.
@@ -115,24 +131,75 @@ export namespace Strings {
   }
 
   /**
+   * Match a string against a regular expression `Strings.RegExp`  (support `i` and `g` flags).
+   * @param args[0] - The string to match.
+   * @param RawRegExp - The regular expression `Strings.RegExp` to match.
+   * @returns The matched object with match array and `index` and `groups` properties.
+   * ```ts
+   * type T0 = Call<S.Match<S.RegExp<"A(?<g1>[b-e]{1,2})F", "i">>, "12aBef34">; // ["aBef", "Be"] & { index: 2; groups: { g1: "Be" } }
+   * type T1 = Call<S.Match<S.RegExp<"a(?<g1>[b-e]{1,2})f", "g" | "i">>, "12aBef34AeCf56">; // ["aBef", "AeCf"]
+   * ```
+   */
+  export type Match<
+    RE extends RegExp<string, any> | unset | _ = unset,
+    Str = unset
+  > = PartialApply<MatchFn, [RE, Str]>;
+
+  interface MatchFn extends Fn {
+    return: this["args"] extends [
+      infer RE extends RegExp<string, any>,
+      infer Str,
+      ...any
+    ]
+      ? Call<Impl.Match, Str, RE>
+      : never;
+  }
+
+  /**
+   * Match a string against a regular expression `Strings.RegExp`, return an array of match objects.
+   * @param args[0] - The string to match.
+   * @param RawRegExp - The regular expression `Strings.RegExp` to match, `g` flag is required (also support `i` flag).
+   * @returns Array of matched object, each with a match array and `index` and `groups` properties.
+   * ```ts
+   * type T0 = Call<S.MatchAll<S.RegExp<"a(?<g1>[b-e]{1,2})f", "g" | "i">>, "12aBef34AeCf56">; // [["aBef", "Be"] & { index: 2; groups: { g1: "Be"; }; }, ["AeCf", "eC"] & { index: 8; groups: { g1: "eC"; }; }]
+   * ```
+   */
+  export type MatchAll<
+    RE extends RegExp<string, any> | unset | _ = unset,
+    Str = unset
+  > = RE extends RE ? PartialApply<MatchAllFn, [RE, Str]> : never;
+
+  interface MatchAllFn extends Fn {
+    return: this["args"] extends [
+      infer RE extends RegExp<string, any>,
+      infer Str,
+      ...any
+    ]
+      ? Call<Impl.MatchAll, Str, RE>
+      : never;
+  }
+
+  /**
    * Replace all instances of a substring in a string.
    * @param args[0] - The string to replace.
-   * @param from - The substring to replace.
-   * @param to - The substring to replace with.
+   * @param from - The substring to replace or a RegExp pattern `Strings.RegExp` (support `i` flag).
+   * @param to - The substring to replace with, can include special replacement patterns when replacing with a RegExp. see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace#specifying_a_string_as_the_replacement for more details.
    * @returns The replaced string.
    * @example
    * ```ts
-   * type T0 = Call<Strings.Replace<".","/">,"a.b.c.d">; // "a/b/c/d"
+   * type T0 = Call<Strings.Replace<S.RegExp<"\\.", "g">, "/">, "a.b.c.d">; // "a/b/c/d"
+   * type T1 = Call<S.Replace<S.RegExp<"b(\\w+):\\s(?<year>\\d{4})/(?<month>\\d{1,2})/(?<day>\\d{1,2})", "i">, "My b$1 is $<month>.$<day>, $2">, "Birthday: 1991/9/15">; // "My birthday is 9.15, 1991"
+   * ```
    */
   export type Replace<
-    from extends string | unset | _ = unset,
+    from extends string | RegExp<string, any> | unset | _ = unset,
     to extends string | unset | _ = unset,
     str = unset
   > = PartialApply<ReplaceFn, [from, to, str]>;
 
   interface ReplaceFn extends Fn {
     return: this["args"] extends [
-      infer From extends string,
+      infer From extends string | RegExp<string, any>,
       infer To extends string,
       infer Str,
       ...any
@@ -162,21 +229,26 @@ export namespace Strings {
   /**
    * Split a string into a tuple of strings.
    * @param args[0] - The string to split.
-   * @param sep - The separator to split the string with.
+   * @param sep - The separator to split the string with, can be a union of strings or RegExp pattern `Strings.RegExp` (support `i` flag)
    * @returns The split string.
    * @warning - 🔥 using an empty sep with emojis in the string will destroy the emoji 🔥
    * @example
    * ```ts
    * type T0 = Call<Strings.Split<",">,"a,b,c">; // ["a","b","c"]
+   * type T1 = Call<Strings.Split<Strings.RegExp<"-{2,4}|\\.">>, "1--2-3.4..5">; // ["1", "2-3", "4", "5"]
    * ```
    */
   export type Split<
-    Sep extends string | unset | _ = unset,
+    Sep extends string | RegExp<string, any> | unset | _ = unset,
     Str extends string | unset | _ = unset
   > = PartialApply<SplitFn, [Sep, Str]>;
 
   export interface SplitFn extends Fn {
-    return: this["args"] extends [infer Sep extends string, infer Str, ...any]
+    return: this["args"] extends [
+      infer Sep extends string | RegExp<string, any>,
+      infer Str,
+      ...any
+    ]
       ? Impl.Split<Str, Sep>
       : never;
   }
